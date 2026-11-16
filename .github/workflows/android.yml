@@ -1,0 +1,40 @@
+name: Android — APK de test
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['apps/mobile/**', 'packages/core/**', 'package-lock.json', '.github/workflows/android.yml']
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Préparer le projet Android natif
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+      - name: Compiler la version de test autonome
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atelier-flow-android-test
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 14
+# Signature de développement Expo : APK réservé aux essais.
+# Avant diffusion définitive, créer et conserver une clé de signature privée dédiée.

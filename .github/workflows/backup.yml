@@ -1,0 +1,38 @@
+name: Sauvegarde chiffrée vers Drive
+# Déclenchement manuel jusqu'à configuration et test des secrets.
+# Ajouter ensuite schedule: [{cron: '0 22 * * 1-5'}] pour 22 h UTC.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      RCLONE_CONFIG_DRIVE_TYPE: drive
+      RCLONE_CONFIG_DRIVE_TOKEN: ${{ secrets.DRIVE_BACKUP_TOKEN }}
+      RCLONE_CONFIG_DRIVE_ROOT_FOLDER_ID: ${{ secrets.DRIVE_BACKUP_FOLDER_ID }}
+    steps:
+      - name: Vérifier la configuration
+        run: |
+          test -n "$SUPABASE_DB_URL"
+          test -n "$BACKUP_PASSPHRASE"
+          test -n "$RCLONE_CONFIG_DRIVE_TOKEN"
+          test -n "$RCLONE_CONFIG_DRIVE_ROOT_FOLDER_ID"
+      - run: sudo apt-get update -qq && sudo apt-get install -y rclone gnupg
+      - name: Exporter, chiffrer et envoyer dans le dossier privé
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          BACKUP_NAME="atelier-$(date -u +%Y%m%dT%H%M%SZ).dump.gpg"
+          trap 'rm -f /tmp/atelier.dump /tmp/atelier.dump.gpg' EXIT
+          docker run --rm -e PGDATABASE="$SUPABASE_DB_URL" postgres:17 pg_dump -Fc --no-owner --no-acl --schema=public --schema=auth --schema=storage > /tmp/atelier.dump
+          test -s /tmp/atelier.dump
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --symmetric --cipher-algo AES256 --output /tmp/atelier.dump.gpg /tmp/atelier.dump
+          rclone copyto /tmp/atelier.dump.gpg "drive:$BACKUP_NAME"
+# Aucun export de données ou artefact de sauvegarde n'est publié sur GitHub.
+# Les fichiers Storage et les secrets serveur nécessitent une sauvegarde séparée.

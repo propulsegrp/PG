@@ -1,0 +1,20 @@
+{
+  "name": "atelier-flow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/core",
+    "apps/mobile"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @atelier/web -- --host 0.0.0.0",
+    "build": "npm run build -w @atelier/web && node scripts/copy-web.mjs",
+    "typecheck": "npm run typecheck -w @atelier/core && npm run typecheck -w @atelier/web && npm run typecheck -w @atelier/mobile",
+    "test": "node --experimental-strip-types --test packages/core/src/core.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

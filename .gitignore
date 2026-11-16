@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.expo/
+.env
+.env.*
+!.env.example
+*.apk
+*.aab
+*.jks
+*.keystore
+*.dump
+*.gpg
+.DS_Store
