@@ -1,0 +1,2 @@
+export function canManageAccount(actorRole:string,targetRole:string,isSelf:boolean){return !isSelf&&targetRole!=='super_admin'&&(actorRole==='super_admin'||actorRole==='manager'&&targetRole==='collaborator')}
+export function canAssignRole(actorRole:string,targetRole:unknown){return targetRole==='collaborator'&&(actorRole==='manager'||actorRole==='super_admin')||targetRole==='manager'&&actorRole==='super_admin'}

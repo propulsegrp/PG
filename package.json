@@ -12,7 +12,7 @@
     "dev": "npm run dev -w @atelier/web -- --host 0.0.0.0",
     "build": "npm run build -w @atelier/web && node scripts/copy-web.mjs",
     "typecheck": "npm run typecheck -w @atelier/core && npm run typecheck -w @atelier/web && npm run typecheck -w @atelier/mobile",
-    "test": "node --experimental-strip-types --test packages/core/src/core.test.ts"
+    "test": "node --experimental-strip-types --test packages/core/src/core.test.ts supabase/functions/atelier-accounts/permissions.test.ts"
   },
   "engines": {
     "node": ">=22"

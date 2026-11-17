@@ -1,4 +1,5 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.110.0';
+import {canManageAccount,canAssignRole} from './permissions.ts';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});
 const hash=async(s:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))).map(v=>v.toString(16).padStart(2,'0')).join('');
@@ -31,9 +32,17 @@ Deno.serve(async req=>{if(req.method==='OPTIONS')return new Response('ok',{heade
   const role=profile.role==='super_admin'&&body.role==='manager'?'manager':'collaborator';const password=random();const {data,error}=await admin.auth.admin.createUser({email:body.email,password,email_confirm:true,user_metadata:{name:body.name.trim().slice(0,120)}});if(error)return reply({error:'Compte non créé. Vérifiez l’adresse ou contactez l’administrateur.'},400);
   const {error:pe}=await admin.from('af_profiles').update({role,active:true}).eq('id',data.user.id);if(pe){await admin.auth.admin.deleteUser(data.user.id);throw pe}await admin.from('af_events').insert({actor,action:'Compte créé et activé',detail:body.name.trim().slice(0,120),ip});return reply({password});
  }
+ if(action==='permissions'){
+  const {data:target}=await admin.from('af_profiles').select('id,role,name,active').eq('id',body.userId).single();
+  if(!target||!canManageAccount(profile.role,target.role,target.id===actor)||!canAssignRole(profile.role,body.role)||typeof body.active!=='boolean')return reply({error:'Modification de rôle ou d’accès non autorisée'},403);
+  if(!body.active){const {error}=await admin.from('af_profiles').update({active:false}).eq('id',target.id);if(error)throw error;}
+  const {error:banError}=await admin.auth.admin.updateUserById(target.id,{ban_duration:body.active?'none':'876000h'});if(banError)throw banError;
+  const {error}=await admin.from('af_profiles').update({role:body.role,active:body.active}).eq('id',target.id);if(error)throw error;
+  await admin.from('af_events').insert({actor,action:'Rôle et accès modifiés',detail:target.name+' : '+target.role+' → '+body.role+' · '+(body.active?'Accès actif':'Accès suspendu'),ip});return reply({ok:true});
+ }
  if(action==='activate'){
-  const {data:target}=await admin.from('af_profiles').select('id,role,name').eq('id',body.userId).single();if(!target||target.id===actor||target.role==='super_admin'||(profile.role==='manager'&&target.role!=='collaborator'))return reply({error:'Action non autorisée sur ce compte'},403);
-  const password=random();const {error}=await admin.auth.admin.updateUserById(target.id,{password});if(error)throw error;const {error:pe}=await admin.from('af_profiles').update({active:true}).eq('id',target.id);if(pe)throw pe;await admin.from('af_events').insert({actor,action:'Accès généré',detail:target.name,ip});return reply({password});
+  const {data:target}=await admin.from('af_profiles').select('id,role,name').eq('id',body.userId).single();if(!target||!canManageAccount(profile.role,target.role,target.id===actor))return reply({error:'Action non autorisée sur ce compte'},403);
+  const password=random();const {error}=await admin.auth.admin.updateUserById(target.id,{password,ban_duration:'none'});if(error)throw error;const {error:pe}=await admin.from('af_profiles').update({active:true}).eq('id',target.id);if(pe)throw pe;await admin.from('af_events').insert({actor,action:'Accès généré',detail:target.name,ip});return reply({password});
  }
  return reply({error:'Action inconnue'},400);
 }catch{return reply({error:'L’opération a échoué. Réessayez ou contactez l’administrateur.'},500)}});
