@@ -1,5 +1,5 @@
 import {createClient} from '@supabase/supabase-js';
-import type {State,Task} from '@atelier/core';
+import {serviceCategory,type State,type Task} from '@atelier/core';
 // Clé publiable : elle identifie le projet ; l'accès est protégé par Auth et RLS.
 export const supabase=createClient('https://vagwswaaozwvjzipfeuh.supabase.co','sb_publishable_pBAkCkq3nrwwGQShO2EZew_hlXiyXTm');
 export async function loadRemote():Promise<State>{const {data,error}=await supabase.rpc('af_state');if(error)throw error;return data as State;}
@@ -12,7 +12,7 @@ export async function applyRemote(action:string,detail:string,before:State,after
  case 'Transfert demandé':p.transfer=t!.transfer;break;
  case 'Transfert autorisé':case 'Transfert refusé':case 'Prise en charge confirmée':break;
  case 'Client ajouté':p.client=after.clients.find(c=>!before.clients.some(x=>x.id===c.id));break;
- case 'Service ajouté':p.service=after.services.find(v=>!before.services.includes(v));break;
+ case 'Service ajouté':case 'Catégorie de service modifiée':{const name=action==='Service ajouté'?after.services.find(v=>!before.services.includes(v)):after.services.find(v=>serviceCategory(v,before.serviceCategories)!==serviceCategory(v,after.serviceCategories));if(!name)return;const {error}=await supabase.rpc('af_save_service',{p_name:name,p_category:serviceCategory(name,after.serviceCategories),p_create:action==='Service ajouté'});if(error)throw error;return;}
  case 'Module modifié':{const m=after.modules.find(m=>m.enabled!==before.modules.find(x=>x.id===m.id)?.enabled)!;p.moduleId=m.id;p.enabled=m.enabled;break;}
  case 'Règle modifiée':p.transferApproval=after.transferApproval;break;
  case 'Journée déclarée':{const d=after.declarations.find(d=>!before.declarations.some(x=>JSON.stringify(x)===JSON.stringify(d)))!;p.empty=d.empty;p.note=d.note;break;}

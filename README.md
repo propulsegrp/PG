@@ -25,7 +25,8 @@ Le dossier `dist` peut être hébergé comme site statique sur Cloudflare Pages.
 
 - Connexion par e-mail et code d'accès ; création initiale de l'administrateur par un lien privé à usage unique.
 - Démonstration explicitement séparée : données fictives locales, sélecteur de rôles uniquement en mode démo.
-- Clients et services, tâches, quantités, échéances, interventions et modifications datées.
+- Clients et services classés en Visuels, Vidéos, Couvertures média ou Autres ; tâches, quantités, échéances, interventions et modifications datées.
+- Statistiques générales de tous les collaborateurs pour le super administrateur ; statistiques individuelles pour les collaborateurs. Répartition par catégorie, service et client, filtres de période/client/auteur et export CSV.
 - Visa « Vu », « Validé », « Correction demandée », historique et statistiques sans double comptage des retouches.
 - Transferts avec motif, point de reprise, autorisation du responsable et confirmation de réception.
 - Déclaration quotidienne, y compris absence de tâche, rappel dans l'application.
@@ -34,7 +35,7 @@ Le dossier `dist` peut être hébergé comme site statique sur Cloudflare Pages.
 
 ## Déploiement Supabase
 
-Les scripts `supabase/schema.sql` et `supabase/accounts.sql` décrivent la structure initiale déjà appliquée au projet sélectionné. **Ne pas les rejouer sur une base déjà initialisée.** Ils sont destinés à une installation neuve. La fonction `supabase/functions/atelier-accounts/index.ts` gère les accès ; elle conserve les clés administratives dans l'environnement serveur. Elle vérifie elle-même l'authentification JWT ou les jetons privés de configuration/inscription.
+Les scripts `supabase/schema.sql` et `supabase/accounts.sql` décrivent la structure initiale déjà appliquée au projet sélectionné. **Ne pas les rejouer sur une base déjà initialisée.** Ils sont destinés à une installation neuve. Appliquer ensuite `supabase/service_categories.sql` pour la classification des services et la lecture des catégories. La fonction `supabase/functions/atelier-accounts/index.ts` gère les accès ; elle conserve les clés administratives dans l'environnement serveur. Elle vérifie elle-même l'authentification JWT ou les jetons privés de configuration/inscription.
 
 Le fichier `apps/web/src/backend.ts` et l'application mobile contiennent uniquement l'URL et une clé **publiable** Supabase. Ces valeurs ne sont pas des secrets ; RLS et les contrôles serveur protègent les données.
 
